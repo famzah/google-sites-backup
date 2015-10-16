@@ -55,7 +55,7 @@ class XmlParserSitesGData:
 
 		exp_name = prev_el['name']
 		if exp_name != name:
-			exit('stack mismatch: exp="%s", got="%s"' % exp_name, name)
+			exit('stack mismatch: exp="%s", got="%s"' % (exp_name, name))
 
 		self.cur_el = prev_el['parent']
 
@@ -75,7 +75,7 @@ class XmlParserSitesGData:
 	def StripContentElement(self, s):
 		m = re.search(r'^(\s*<\s*content(:?\s+[^>]+)?\s*>)', s, re.IGNORECASE)
 		if m is None:
-			exit('Unable to match the "content" element: %s' % s)
+			exit('Unable to match the "content" element: %s' % (s))
 		content_prefix = m.group(1)
 		prefix_len = len(content_prefix)
 		return s[prefix_len:]
@@ -156,13 +156,13 @@ class XmlParserSitesGData:
 			if not none_is_ok:
 				exit(
 					'%s::FindOneElement(%s): none elements found' % \
-					cls.__name__, name
+					(cls.__name__, name)
 				)
 			return None # XXX: return() here
 		if len(ret) > 1:
 			exit(
 				'%s::FindOneElement(%s): too many elements found: count=%d' % \
-				cls.__name__, name, len(ret)
+				(cls.__name__, name, len(ret))
 			)
 		return ret[0]
 
@@ -247,7 +247,7 @@ class SitesBackup:
 			token = gdata.gauth.OAuth2Token(**auth_kwargs)
 			print '\nVisit the following URL in your browser '\
 				'to authorize this app:\n\n%s\n' % \
-					str(token.generate_authorize_url())
+					(str(token.generate_authorize_url()))
 			code = raw_input('What is the verification code? ').strip()
 			token.get_access_token(code)
 			#client.auth_token = token
@@ -292,7 +292,7 @@ class SitesBackup:
 	def DumpEntry(self, entry, out, raw_html):
 		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.page_name:
-			out['meta'].append(' page name:\t%s' % entry.page_name.text)
+			out['meta'].append(' page name:\t%s' % (entry.page_name.text))
 		if entry.content:
 			#out['content'] = str(entry.content.html)
 			out['content'] = str(raw_html)
@@ -318,14 +318,14 @@ class SitesBackup:
 
 	def DumpFileCabinetPage(self, entry, out):
 		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
-		out['meta'].append(' page name:\t%s' % entry.page_name.text)
+		out['meta'].append(' page name:\t%s' % (entry.page_name.text))
 		out['content'] = str(entry.content.html)
 		out['extension'] = 'xml'
 
 	def DumpAttachment(self, entry, out):
 		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.summary is not None:
-			out['meta'].append(' description:\t%s' % entry.summary.text)
+			out['meta'].append(' description:\t%s' % (entry.summary.text))
 		out['meta'].append(' content-type\t%s' % (entry.content.type))
 		out['content'] = self.client._GetFileContent(entry.content.src)
 		#out['extension'] = 'attachment'
@@ -334,8 +334,8 @@ class SitesBackup:
 	def DumpWebAttachment(self, entry, out):
 		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.summary.text is not None:
-			out['meta'].append(' description:\t%s' % entry.summary.text)
-		out['meta'].append(' content src\t%s' % entry.content.src)
+			out['meta'].append(' description:\t%s' % (entry.summary.text))
+		out['meta'].append(' content src\t%s' % (entry.content.src))
 		# no extension -> only a ".meta" file will be created
 
 	def _StoreFile(self, dirname, filename_short, desc, content, kind):
@@ -356,7 +356,7 @@ class SitesBackup:
 	):
 		bdir = '%s/%s' % (destdir, href_dirname)
 
-		metafile = '%s.meta' % href_filename
+		metafile = '%s.meta' % (href_filename)
 
 		bfile = href_filename
 		if 'extension' in entity:
@@ -368,7 +368,7 @@ class SitesBackup:
 			kind
 		)
 		self._StoreFile(
-			'%s/__meta' % bdir, metafile, 'Meta',
+			'%s/__meta' % (bdir), metafile, 'Meta',
 			"\n".join(entity['meta']).encode('utf-8'),
 			kind
 		)
@@ -398,7 +398,7 @@ class SitesBackup:
 			if content is not None:
 				content = content['char_data']
 			if pub_href in raw_html_content:
-				exit('Encountering HREF "%s" for the second time' % pub_href)
+				exit('Encountering HREF "%s" for the second time' % (pub_href))
 			raw_html_content[pub_href] = content
 
 		# The standard implementation by Google.
@@ -417,7 +417,7 @@ class SitesBackup:
 		if not len(destdir):
 			destdir = '.'
 
-		print "\nFetching & saving the content feed of '%s' ..." % self.client.site
+		print "\nFetching & saving the content feed of '%s' ..." % (self.client.site)
 
 		(feed, raw_html_content) = self.GetContentFeed()
 
@@ -439,11 +439,11 @@ class SitesBackup:
 					processed.add(pub_href)
 
 					out['meta'].append(
-						' view in Sites:\t%s' % pub_href
+						' view in Sites:\t%s' % (pub_href)
 					)
 					m = url_re.match(pub_href)
 					if not m:
-						exit('Unable to parse URL: %s' % pub_href)
+						exit('Unable to parse URL: %s' % (pub_href))
 					href_dirname = m.group(2)
 					href_filename = m.group(3)
 				else:
@@ -462,29 +462,29 @@ class SitesBackup:
 				elif kind == 'webpage':
 					self.DumpEntry(entry, out, raw_html_content[pub_href])
 				else:
-					exit('Unknown/untested kind: %s' % kind)
+					exit('Unknown/untested kind: %s' % (kind))
 
-				out['meta'].append(' revision:\t%s' % entry.revision.text)
-				out['meta'].append(' updated:\t%s' % entry.updated.text)
+				out['meta'].append(' revision:\t%s' % (entry.revision.text))
+				out['meta'].append(' updated:\t%s' % (entry.updated.text))
 				#updated_time = datetime.strptime(
 				#	entry.updated.text, '%Y-%m-%dT%H:%M:%S.%fZ'
 				#)
 
 				parent_link = entry.FindParentLink()
 				if parent_link:
-					out['meta'].append(' parent link:\t%s' % parent_link)
+					out['meta'].append(' parent link:\t%s' % (parent_link))
 
 				if entry.feed_link:
 					out['meta'].append(
-						' feed of items:\t%s' % entry.feed_link.href
+						' feed of items:\t%s' % (entry.feed_link.href)
 					)
 
 				if entry.IsDeleted():
-					out['meta'].append(' deleted:\t%s' % entry.IsDeleted())
+					out['meta'].append(' deleted:\t%s' % (entry.IsDeleted()))
 
 				if entry.in_reply_to:
 					out['meta'].append(
-						' in reply to:\t%s' % entry.in_reply_to.href
+						' in reply to:\t%s' % (entry.in_reply_to.href)
 					)
 
 				self.StoreBackupEntry(
