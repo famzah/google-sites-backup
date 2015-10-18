@@ -7,6 +7,7 @@ from datetime import datetime
 import re
 import xml.parsers.expat
 import atom.core
+from pprint import pprint
 
 SOURCE_APP_NAME = 'backupApp-GoogleSitesAPIPythonLib'
 
@@ -83,6 +84,7 @@ class XmlParserSitesGData:
 
 	def NewElement(self, name):
 		return {
+			'_name': name, # top entry when dumping via pprint()
 			'name': name,
 			'attrs': [],
 			'char_data': [],
@@ -199,7 +201,9 @@ class SitesBackup:
 
 	def __init__(self, debug = False):
 		self.settings = gdata.sample_util.SettingsUtil()
-		self.client = self.CreateSitesClient(debug)
+		self.client = self.CreateSitesClient(debug = False)
+		self.get_oper_id = 0
+		self.debug = debug
 
 	def CreateSitesClient(self, debug):
 		"""Instantiate and authorize a Google Sites API client."""
@@ -404,10 +408,14 @@ class SitesBackup:
 		# The standard implementation by Google.
 		# Cache the "response" data and let the "gdata" library parse it.
 
+		debug_file = None
+		if self.debug:
+			debug_file = '%s/api_response.%d' % (self.debug_dir, self.get_oper_id)
+
 		orig_atom_core_parse = atom.core.parse
 		mp = AtomCoreParseMonkeyPatch(
 			orig_atom_core_parse,
-			None
+			debug_file
 		)
 		atom.core.parse = mp.Parse
 
@@ -430,9 +438,17 @@ class SitesBackup:
 			assert cached_xml is None
 			feed_raw = parser.Parse(None)
 
+		# save the parsed XML in a debug file
+		if self.debug:
+			fd = open('%s/parsed_data.%d' % (self.debug_dir, self.get_oper_id), 'w')
+			pprint(feed_raw, stream = fd)
+			fd.close()
+
 		return feed_raw
 
 	def GetContentFeed(self, next_link_href = None):
+		self.get_oper_id += 1
+
 		(feed, cached_xml) = self._GetContentFeed_Google(next_link_href)
 		feed_raw = self._GetContentFeed_Ours(cached_xml = cached_xml)
 
@@ -461,6 +477,10 @@ class SitesBackup:
 		).strip()
 		if not len(destdir):
 			destdir = '.'
+
+		if self.debug:
+			self.debug_dir = '%s/__debug/%s' % (destdir, self.client.site)
+			os.makedirs(self.debug_dir)
 
 		print "\nFetching & saving the content feed of '%s' ..." % (self.client.site)
 
@@ -507,7 +527,13 @@ class SitesBackup:
 				#elif kind == 'listpage':
 				#	self.DumpListPage(entry, out)
 				elif kind == 'webpage':
-					self.DumpEntry(entry, out, raw_html_content[pub_href])
+					if pub_href not in raw_html_content:
+						exit(
+							"No parsed HTML content for: %s" % \
+							(pub_href)
+						)
+					html_content = raw_html_content[pub_href]
+					self.DumpEntry(entry, out, html_content)
 				else:
 					exit('Unknown/untested kind: %s' % (kind))
 
