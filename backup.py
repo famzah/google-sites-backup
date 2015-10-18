@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 import re
 import xml.parsers.expat
+import atom.core
 
 SOURCE_APP_NAME = 'backupApp-GoogleSitesAPIPythonLib'
 
@@ -96,7 +97,7 @@ class XmlParserSitesGData:
 			with open(self.cache_file, 'r') as fh:
 				xmls = fh.read()
 		else:
-			xmls = response.read()
+			xmls = response
 			if self.cache_file is not None:
 				with open(self.cache_file, 'w') as fh:
 					fh.write(xmls)
@@ -165,6 +166,32 @@ class XmlParserSitesGData:
 				(cls.__name__, name, len(ret))
 			)
 		return ret[0]
+
+class AtomCoreParseMonkeyPatch:
+	def __init__(self, orig_function, debug_file):
+		self.orig_function = orig_function
+		self.xml_string = None
+		self.debug_file = debug_file
+	
+	# XXX: The same signature as in "gdata-python-client.git/src/atom/core.py"
+	def Parse(self, xml_string, target_class=None, version=1, encoding=None):
+		assert self.xml_string is None
+
+		self.xml_string = xml_string # cache it
+		self.SaveDebugFile()
+
+		return self.orig_function(xml_string, target_class, version, encoding)
+	
+	def GetTheCachedXML(self):
+		return self.xml_string
+	
+	def SaveDebugFile(self):
+		if self.debug_file is None:
+			return
+			
+		with open(self.debug_file, 'w') as fh:
+			fh.write(self.xml_string)
+		
 
 class SitesBackup:
 	"""Backup your content using the Google Sites API functionality."""
@@ -373,16 +400,41 @@ class SitesBackup:
 			kind
 		)
 
-	def GetContentFeed(self, next_link_href = None):
-		#parser = XmlParserSitesGData(cache_file = '/tmp/gsites-cache')
-		parser = XmlParserSitesGData(cache_file = None)
+	def _GetContentFeed_Google(self, next_link_href):
+		# The standard implementation by Google.
+		# Cache the "response" data and let the "gdata" library parse it.
+
+		orig_atom_core_parse = atom.core.parse
+		mp = AtomCoreParseMonkeyPatch(
+			orig_atom_core_parse,
+			None
+		)
+		atom.core.parse = mp.Parse
+
+		feed = self.client.GetContentFeed(
+			next_link_href
+		)
+
+		atom.core.parse = orig_atom_core_parse # restore original function
+
+		cached_xml = mp.GetTheCachedXML()
+
+		return (feed, cached_xml)
+
+	def _GetContentFeed_Ours(self, cache_file = None, cached_xml = None):
+		parser = XmlParserSitesGData(cache_file = cache_file)
 		if not parser.HasCache():
-			feed_raw = self.client.GetContentFeed(
-				next_link_href,
-				converter=parser.Parse
-			)
+			assert cached_xml is not None
+			feed_raw = parser.Parse(cached_xml)
 		else: # read from cache (useful only during development)
+			assert cached_xml is None
 			feed_raw = parser.Parse(None)
+
+		return feed_raw
+
+	def GetContentFeed(self, next_link_href = None):
+		(feed, cached_xml) = self._GetContentFeed_Google(next_link_href)
+		feed_raw = self._GetContentFeed_Ours(cached_xml = cached_xml)
 
 		raw_html_content = {}
 		for entry in XmlParserSitesGData.FindAllElements(feed_raw['elements'], name = 'entry'):
@@ -400,13 +452,6 @@ class SitesBackup:
 			if pub_href in raw_html_content:
 				exit('Encountering HREF "%s" for the second time' % (pub_href))
 			raw_html_content[pub_href] = content
-
-		# The standard implementation by Google.
-		# We can't inject nor get the "response" object in/from it,
-		# so we need to make a second call.
-		feed = self.client.GetContentFeed(
-			next_link_href
-		)
 
 		return (feed, raw_html_content)
 
@@ -429,6 +474,8 @@ class SitesBackup:
 
 				out = {}
 				out['meta'] = []
+
+				out['meta'].append(' id:\t%s' % (entry.GetId()))
 
 				if entry.GetAlternateLink():
 					pub_href = entry.GetAlternateLink().href
