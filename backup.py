@@ -456,8 +456,14 @@ class SitesBackup:
 		for entry in XmlParserSitesGData.FindAllElements(feed_raw['elements'], name = 'entry'):
 			pub_href = XmlParserSitesGData.FindOneElement(
 			 	entry['elements'], name = 'link',
-				attr_name = 'rel', attr_value = 'alternate'
+				attr_name = 'rel', attr_value = 'alternate',
+				none_is_ok = True
 			)
+			if pub_href is None:
+				# TODO: add this white-list only for the known entries:
+				#   kind == 'listitem' or kind == 'webattachment'
+				continue # some entries don't have a URL address
+
 			pub_href = pub_href['attrs']['href']
 			content = XmlParserSitesGData.FindOneElement(
 				entry['elements'], name = 'content',
@@ -514,7 +520,12 @@ class SitesBackup:
 					href_dirname = m.group(2)
 					href_filename = m.group(3)
 				else:
-					exit('Unable to get the public Sites URL address')
+					if kind not in ['listitem', 'webattachment']:
+						exit(
+							'Unable to get the '\
+							'public Sites URL address: %s' % \
+							(kind)
+						)
 
 				if kind == 'attachment':
 					self.DumpAttachment(entry, out)
@@ -526,7 +537,7 @@ class SitesBackup:
 				#	self.DumpListItem(entry, out)
 				#elif kind == 'listpage':
 				#	self.DumpListPage(entry, out)
-				elif kind == 'webpage':
+				elif kind in ['webpage', 'announcement', 'announcementspage']:
 					if pub_href not in raw_html_content:
 						exit(
 							"No parsed HTML content for: %s" % \
@@ -535,7 +546,13 @@ class SitesBackup:
 					html_content = raw_html_content[pub_href]
 					self.DumpEntry(entry, out, html_content)
 				else:
-					exit('Unknown/untested kind: %s' % (kind))
+					err = 'I do not know how to backup this kind: %s' % (kind)
+					skip_unknown = False
+					if not skip_unknown:
+						exit(err)
+					else:
+						print 'WARNING: %s' % (err)
+						continue
 
 				out['meta'].append(' revision:\t%s' % (entry.revision.text))
 				out['meta'].append(' updated:\t%s' % (entry.updated.text))
