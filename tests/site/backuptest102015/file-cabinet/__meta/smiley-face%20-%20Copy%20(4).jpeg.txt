@@ -3,7 +3,7 @@ Title: smiley-face - Copy (4).jpeg [attachment]
  view in Sites:	https://sites.google.com/site/backuptest102015/file-cabinet/smiley-face%20-%20Copy%20(4).jpeg
  description:	None
  content-type:	image/jpeg
- folder:	Subfolder1
- revision:	2
- updated:	2015-10-17T05:29:43.992Z
+ folder:	Папка1
+ revision:	3
+ updated:	2015-10-27T21:10:55.602Z
  parent link:	https://sites.google.com/feeds/content/site/backuptest102015/9131221482359606140
