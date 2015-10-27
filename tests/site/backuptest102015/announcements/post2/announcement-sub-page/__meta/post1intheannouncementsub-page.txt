@@ -1,0 +1,7 @@
+Title: Post1 in the announcement sub-page [announcement]
+ id:	https://sites.google.com/feeds/content/site/backuptest102015/1032735742246314773
+ view in Sites:	https://sites.google.com/site/backuptest102015/announcements/post2/announcement-sub-page/post1intheannouncementsub-page
+ page name:	post1intheannouncementsub-page
+ revision:	1
+ updated:	2015-10-22T18:51:15.092Z
+ parent link:	https://sites.google.com/feeds/content/site/backuptest102015/8592043675918500279

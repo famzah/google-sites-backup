@@ -1,0 +1,9 @@
+Title: smiley-face.jpeg [attachment]
+ id:	https://sites.google.com/feeds/content/site/backuptest102015/2260072793271818064
+ view in Sites:	https://sites.google.com/site/backuptest102015/announcements/post2/file-cabinet-sub-page/smiley-face.jpeg
+ description:	None
+ content-type:	image/jpeg
+ folder:	child-folder1
+ revision:	2
+ updated:	2015-10-22T18:54:12.447Z
+ parent link:	https://sites.google.com/feeds/content/site/backuptest102015/906340220397280049

@@ -1,0 +1,7 @@
+Title: Two column page [webpage]
+ id:	https://sites.google.com/feeds/content/site/backuptest102015/7641129884321305674
+ view in Sites:	https://sites.google.com/site/backuptest102015/home/two-column-page
+ page name:	two-column-page
+ revision:	2
+ updated:	2015-10-13T06:11:52.609Z
+ parent link:	https://sites.google.com/feeds/content/site/backuptest102015/2842199986770876003

@@ -1,0 +1,8 @@
+Title: Announcement sub-page [announcementspage]
+ id:	https://sites.google.com/feeds/content/site/backuptest102015/8592043675918500279
+ view in Sites:	https://sites.google.com/site/backuptest102015/announcements/post2/announcement-sub-page
+ page name:	announcement-sub-page
+ revision:	2
+ updated:	2015-10-22T18:51:48.544Z
+ parent link:	https://sites.google.com/feeds/content/site/backuptest102015/8744532141971615526
+ feed of items:	https://sites.google.com/feeds/content/site/backuptest102015?parent=8592043675918500279

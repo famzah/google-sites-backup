@@ -1,0 +1,8 @@
+Title: File cabinet sub-page [filecabinet]
+ id:	https://sites.google.com/feeds/content/site/backuptest102015/906340220397280049
+ view in Sites:	https://sites.google.com/site/backuptest102015/announcements/post2/file-cabinet-sub-page
+ page name:	file-cabinet-sub-page
+ revision:	3
+ updated:	2015-10-22T20:53:04.860Z
+ parent link:	https://sites.google.com/feeds/content/site/backuptest102015/8744532141971615526
+ feed of items:	https://sites.google.com/feeds/content/site/backuptest102015?parent=906340220397280049

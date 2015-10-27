@@ -1,0 +1,7 @@
+Title: Announcements [announcementspage]
+ id:	https://sites.google.com/feeds/content/site/backuptest102015/8988386903921698982
+ view in Sites:	https://sites.google.com/site/backuptest102015/announcements
+ page name:	announcements
+ revision:	5
+ updated:	2015-10-19T18:11:01.188Z
+ feed of items:	https://sites.google.com/feeds/content/site/backuptest102015?parent=8988386903921698982
