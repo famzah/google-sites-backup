@@ -645,6 +645,9 @@ class SitesBackup:
 			# end: for prefix
 		# end: for parent_id
 
+		if not os.path.exists(src_dir_parent): # no feed entries downloaded at all
+			return
+
 		print "\nRemoving the site's empty feeds content directory: %s" % \
 			(src_dir_parent)
 		os.rmdir(src_dir_parent)
