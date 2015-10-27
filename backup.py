@@ -255,6 +255,10 @@ class SitesBackup:
 			'which identifies your app', reuse=True
 		)
 
+		# support for public Google Sites
+		if client_id == '':
+			return
+
 		client_secret = self.settings.get_param(
 			'client_secret', 'Please enter your OAuth 2.0 Client secret '
 			'which you share with the OAuth provider', reuse=False
