@@ -2,12 +2,14 @@
 
 import gdata.sample_util
 import gdata.sites.client
+import gdata.sites.data
 import os
 from datetime import datetime
 import re
 import xml.parsers.expat
 import atom.core
 from pprint import pprint
+import cgi
 
 SOURCE_APP_NAME = 'backupApp-GoogleSitesAPIPythonLib'
 
@@ -321,53 +323,51 @@ class SitesBackup:
 			return site_domain
 
 	def DumpEntry(self, entry, out, raw_html):
-		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
+		out['meta'].insert(0, 'Title: %s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.page_name:
 			out['meta'].append(' page name:\t%s' % (entry.page_name.text))
-		if entry.content:
-			#out['content'] = str(entry.content.html)
-			out['content'] = str(raw_html)
-			if raw_html is None:
-				exit('Raw HTML is none?')
+
+		assert raw_html is not None
+		begin_html = '''
+		<html>
+		<head>
+			<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+			<title>{}</title>
+		</head>
+		<body>
+
+		'''.format(cgi.escape(entry.title.text))
+		title_html = "<h1>%s</h1>\n\n" % (cgi.escape(entry.title.text))
+		out['content'] = begin_html + title_html + str(raw_html)
+
 		out['extension'] = 'html'
 
 	def DumpListItem(self, entry, out):
-		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
+		out['meta'].insert(0, 'Title: %s [%s]' % (entry.title.text, entry.Kind()))
 		s = ''
 		for col in entry.field:
 			s += ' %s %s\t%s\n' % (col.index, col.name, col.text)
 		out['content'] = s
 		out['extension'] = 'txt'
 
-	def DumpListPage(self, entry, out):
-		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
-		s = ''
-		for col in entry.data.column:
-			s += ' %s %s\n' % (col.index, col.name)
-		out['content'] = s
-		out['extension'] = 'txt'
-
-	def DumpFileCabinetPage(self, entry, out):
-		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
-		out['meta'].append(' page name:\t%s' % (entry.page_name.text))
-		out['content'] = str(entry.content.html)
-		out['extension'] = 'xml'
-
 	def DumpAttachment(self, entry, out):
-		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
+		out['meta'].insert(0, 'Title: %s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.summary is not None:
 			out['meta'].append(' description:\t%s' % (entry.summary.text))
-		out['meta'].append(' content-type\t%s' % (entry.content.type))
+		out['meta'].append(' content-type:\t%s' % (entry.content.type))
+		for cat in entry.category:
+			if cat.scheme == gdata.sites.data.FOLDER_KIND_TERM:
+				out['meta'].append(' folder:\t%s' % (cat.term))
 		out['content'] = self.client._GetFileContent(entry.content.src)
 		#out['extension'] = 'attachment'
 		# no extension -> use the original URL name (and extension)
 
 	def DumpWebAttachment(self, entry, out):
-		out['meta'].append('%s [%s]' % (entry.title.text, entry.Kind()))
+		out['meta'].insert(0, 'Title: %s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.summary.text is not None:
 			out['meta'].append(' description:\t%s' % (entry.summary.text))
-		out['meta'].append(' content src\t%s' % (entry.content.src))
-		# no extension -> only a ".meta" file will be created
+		out['content'] = "%s\n\n%s" % (entry.summary.text, entry.content.src)
+		out['extension'] = 'link'
 
 	def _StoreFile(self, dirname, filename_short, desc, content, kind):
 		filename = '%s/%s' % (dirname, filename_short)
@@ -382,12 +382,10 @@ class SitesBackup:
 		with open(filename, 'w') as fh:
 			fh.write(content)
 
-	def StoreBackupEntry(
-			self, destdir, entity, href_dirname, href_filename, kind
-	):
+	def StoreBackupEntry(self, destdir, entity, href_dirname, href_filename, kind):
 		bdir = '%s/%s' % (destdir, href_dirname)
 
-		metafile = '%s.meta' % (href_filename)
+		metafile = '%s.txt' % (href_filename)
 
 		bfile = href_filename
 		if 'extension' in entity:
@@ -400,7 +398,7 @@ class SitesBackup:
 		)
 		self._StoreFile(
 			'%s/__meta' % (bdir), metafile, 'Meta',
-			"\n".join(entity['meta']).encode('utf-8'),
+			"\n".join(entity['meta'] + ['']).encode('utf-8'),
 			kind
 		)
 
@@ -460,8 +458,6 @@ class SitesBackup:
 				none_is_ok = True
 			)
 			if pub_href is None:
-				# TODO: add this white-list only for the known entries:
-				#   kind == 'listitem' or kind == 'webattachment'
 				continue # some entries don't have a URL address
 
 			pub_href = pub_href['attrs']['href']
@@ -477,23 +473,23 @@ class SitesBackup:
 
 		return (feed, raw_html_content)
 
-	def Run(self):
-		destdir = self.settings.get_param(
-			'backup_dir', 'Directory to store the backup', reuse=True
-		).strip()
-		if not len(destdir):
-			destdir = '.'
+	def ParseUrl(self, pub_href):
+		url_re = re.compile(r'^http(s)?:\/\/sites\.google\.com\/(.+)/([^\/]+)$')
 
-		if self.debug:
-			self.debug_dir = '%s/__debug/%s' % (destdir, self.client.site)
-			os.makedirs(self.debug_dir)
+		m = url_re.match(pub_href)
+		if not m:
+			exit('Unable to parse URL: %s' % (pub_href))
 
-		print "\nFetching & saving the content feed of '%s' ..." % (self.client.site)
+		href_dirname = m.group(2)
+		href_filename = m.group(3)
 
+		return (href_dirname, href_filename)
+
+	def ProcessFeedEntries(self, destdir):
 		(feed, raw_html_content) = self.GetContentFeed()
 
-		url_re = re.compile(r'^http(s)?:\/\/sites\.google\.com\/(.+)/([^\/]+)$')
 		processed = set()
+		id_to_pub_href = {}
 		while feed is not None:
 			for entry in feed.entry:
 				kind = entry.Kind()
@@ -502,6 +498,7 @@ class SitesBackup:
 				out['meta'] = []
 
 				out['meta'].append(' id:\t%s' % (entry.GetId()))
+				entry_short_id = self.ParseUrl(entry.GetId())[1]
 
 				if entry.GetAlternateLink():
 					pub_href = entry.GetAlternateLink().href
@@ -514,11 +511,15 @@ class SitesBackup:
 					out['meta'].append(
 						' view in Sites:\t%s' % (pub_href)
 					)
-					m = url_re.match(pub_href)
-					if not m:
-						exit('Unable to parse URL: %s' % (pub_href))
-					href_dirname = m.group(2)
-					href_filename = m.group(3)
+
+					if entry_short_id in id_to_pub_href:
+						exit(
+							'Processing ID for the second time' % \
+							(entry_short_id)
+						)
+					id_to_pub_href[entry_short_id] = pub_href
+
+					(href_dirname, href_filename) = self.ParseUrl(pub_href)
 				else:
 					if kind not in ['listitem', 'webattachment']:
 						exit(
@@ -527,17 +528,29 @@ class SitesBackup:
 							(kind)
 						)
 
+					pub_href = entry.FindParentLink()
+					pub_href += '/' + entry_short_id
+
+					if pub_href in processed:
+						# avoid duplicates by GetContentFeed(next_link)
+						continue
+					processed.add(pub_href)
+
+					(href_dirname, href_filename) = self.ParseUrl(pub_href)
+
+				html_pages = [
+					'webpage', 'announcement',
+					'announcementspage', 'filecabinet',
+					'listpage',
+				]
+
 				if kind == 'attachment':
 					self.DumpAttachment(entry, out)
-				#elif kind == 'webattachment':
-				#	self.DumpWebAttachment(entry, out)
-				#elif kind == 'filecabinet':
-				#	self.DumpFileCabinetPage(entry, out)
-				#elif kind == 'listitem':
-				#	self.DumpListItem(entry, out)
-				#elif kind == 'listpage':
-				#	self.DumpListPage(entry, out)
-				elif kind in ['webpage', 'announcement', 'announcementspage']:
+				elif kind == 'webattachment':
+					self.DumpWebAttachment(entry, out)
+				elif kind == 'listitem':
+					self.DumpListItem(entry, out)
+				elif kind in html_pages:
 					if pub_href not in raw_html_content:
 						exit(
 							"No parsed HTML content for: %s" % \
@@ -593,8 +606,73 @@ class SitesBackup:
 			else:
 				(feed, raw_html_content) = self.GetContentFeed(next_link.href)
 
+		return id_to_pub_href
+	
+	def MoveChildEntries(self, destdir, id_to_pub_href):
+		print "\nMoving list entries into their parent pages..."
+
+		for parent_id, pub_href in id_to_pub_href.iteritems():
+			src_dir_parent = '%s/feeds/content/site/%s' % (destdir, self.client.site)
+			src_dir = '%s/%s' % \
+				(src_dir_parent, parent_id)
+
+			(href_dirname, href_filename) = self.ParseUrl(pub_href)
+			dst_dir = '%s/%s/%s/__items' % (destdir, href_dirname, href_filename)
+
+			if not os.path.exists(src_dir):
+				continue
+
+			for prefix in ['__meta', '']:
+				curr_dst_dir = '%s/%s' % (dst_dir, prefix)
+				curr_src_dir = '%s/%s' % (src_dir, prefix)
+
+				if not os.path.exists(curr_dst_dir):
+					os.makedirs(curr_dst_dir)
+
+				for f in os.listdir(curr_src_dir):
+					src_f_full = '%s/%s' % (curr_src_dir, f)
+					dst_f_full = '%s/%s' % (curr_dst_dir, f)
+					print 'os.rename(%s -> %s)' % (src_f_full, dst_f_full)
+					os.rename(src_f_full, dst_f_full)
+
+				print 'os.rmdir(%s)' % (curr_src_dir)
+				os.rmdir(curr_src_dir)
+
+			# end: for prefix
+		# end: for parent_id
+
+		print "\nRemoving the site's empty feeds content directory: %s" % \
+			(src_dir_parent)
+		os.rmdir(src_dir_parent)
+
+		print "Removing the empty feeds content directory structure..."
+		feeds_dir = ['feeds', 'content', 'site']
+		while len(feeds_dir):
+			target = '%s/%s' % (destdir, '/'.join(feeds_dir))
+			os.rmdir(target)
+			feeds_dir.pop() # remove last component of the path
+
+	def Run(self):
+		destdir = self.settings.get_param(
+			'backup_dir', 'Directory to store the backup', reuse=True
+		).strip()
+		if not len(destdir):
+			destdir = '.'
+
+		if self.debug:
+			self.debug_dir = '%s/__debug/%s' % (destdir, self.client.site)
+			os.makedirs(self.debug_dir)
+
+		print "Fetching & saving the content feed of '%s' ..." % (self.client.site)
+
+		id_to_pub_href = self.ProcessFeedEntries(destdir) # HTTP transfers
+
+		self.MoveChildEntries(destdir, id_to_pub_href) # local file operations
+
+		print "\nAll done."
+
 def main():
-	backup = SitesBackup(debug=False)
+	backup = SitesBackup(debug=True)
 	backup.Run()
 
 if __name__ == '__main__':
