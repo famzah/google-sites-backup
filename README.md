@@ -1,6 +1,13 @@
 # google-sites-backup
 Export a Google Site and save it locally on your computer.
 
+Features and limitations:
+* The saved copy represents the last revision of your site. No revision history is downloaded.
+* The primary intend of this script is to backup your data. It does not support import back to Google Sites.
+* Items in a "list page" and "web attachment" links are formatted and saved as separate files.
+* Files in a "file cabinet page" may be categorized in folders. This info is saved in the "meta" files.
+* The default output format of the saved pages may differ from what you see online at Google Sites. All your data however should be properly mirrored locally, and you can represent it later in any format.
+
 ## Installation
 
 ```bash
