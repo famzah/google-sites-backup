@@ -340,8 +340,8 @@ class SitesBackup:
 		</head>
 		<body>
 
-		'''.format(cgi.escape(entry.title.text))
-		title_html = "<h1>%s</h1>\n\n" % (cgi.escape(entry.title.text))
+		'''.format(cgi.escape(entry.title.text.encode('utf-8')))
+		title_html = "<h1>%s</h1>\n\n" % (cgi.escape(entry.title.text.encode('utf-8')))
 		out['content'] = begin_html + title_html + str(raw_html)
 
 		out['extension'] = 'html'
@@ -351,7 +351,7 @@ class SitesBackup:
 		s = ''
 		for col in entry.field:
 			s += ' %s %s\t%s\n' % (col.index, col.name, col.text)
-		out['content'] = s
+		out['content'] = s.encode('utf-8')
 		out['extension'] = 'txt'
 
 	def DumpAttachment(self, entry, out):
@@ -370,7 +370,9 @@ class SitesBackup:
 		out['meta'].insert(0, 'Title: %s [%s]' % (entry.title.text, entry.Kind()))
 		if entry.summary.text is not None:
 			out['meta'].append(' description:\t%s' % (entry.summary.text))
-		out['content'] = "%s\n\n%s" % (entry.summary.text, entry.content.src)
+		out['content'] = "%s\n\n%s" % (
+			entry.summary.text.encode('utf-8'), entry.content.src.encode('utf-8')
+		)
 		out['extension'] = 'link'
 
 	def _StoreFile(self, dirname, filename_short, desc, content, kind):
