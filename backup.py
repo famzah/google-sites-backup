@@ -334,6 +334,11 @@ class SitesBackup:
 			out['meta'].append(' page name:\t%s' % (entry.page_name.text))
 
 		assert raw_html is not None
+
+		e_title = "None"
+		if entry.title.text is not None:
+			e_title = entry.title.text
+		
 		begin_html = '''
 		<html>
 		<head>
@@ -342,8 +347,8 @@ class SitesBackup:
 		</head>
 		<body>
 
-		'''.format(cgi.escape(entry.title.text.encode('utf-8')))
-		title_html = "<h1>%s</h1>\n\n" % (cgi.escape(entry.title.text.encode('utf-8')))
+		'''.format(cgi.escape(e_title.encode('utf-8')))
+		title_html = "<h1>%s</h1>\n\n" % (cgi.escape(e_title.encode('utf-8')))
 		out['content'] = begin_html + title_html + str(raw_html)
 
 		out['extension'] = 'html'
@@ -370,10 +375,18 @@ class SitesBackup:
 
 	def DumpWebAttachment(self, entry, out):
 		out['meta'].insert(0, 'Title: %s [%s]' % (entry.title.text, entry.Kind()))
+
+		e_summary = "None"
 		if entry.summary.text is not None:
-			out['meta'].append(' description:\t%s' % (entry.summary.text))
+			e_summary = entry.summary.text
+			out['meta'].append(' description:\t%s' % (e_summary))
+
+		e_src = "None"
+		if entry.content.src is not None:
+			e_src = entry.content.src
+
 		out['content'] = "%s\n\n%s" % (
-			entry.summary.text.encode('utf-8'), entry.content.src.encode('utf-8')
+			e_summary.encode('utf-8'), e_src.encode('utf-8')
 		)
 		out['extension'] = 'link'
 
