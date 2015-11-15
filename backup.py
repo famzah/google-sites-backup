@@ -8,8 +8,10 @@ from datetime import datetime
 import re
 import xml.parsers.expat
 import atom.core
-from pprint import pprint
+from pprint import pprint, pformat
 import cgi
+import sys
+import traceback
 
 SOURCE_APP_NAME = 'backupApp-GoogleSitesAPIPythonLib'
 
@@ -457,7 +459,19 @@ class SitesBackup:
 		feed_raw = self._GetContentFeed_Ours(cached_xml = cached_xml)
 
 		raw_html_content = {}
+		raw_entry_by_full_id = {}
 		for entry in XmlParserSitesGData.FindAllElements(feed_raw['elements'], name = 'entry'):
+			full_id = XmlParserSitesGData.FindOneElement(
+			 	entry['elements'], name = 'id',
+				none_is_ok = True
+			)
+			if full_id is not None and isinstance(full_id['char_data'], list):
+				if len(full_id['char_data']) == 1:
+					key_raw = full_id['char_data'][0]
+					key_raw = re.sub(r"^u'(.*)'$", r'\1', key_raw)
+					if len(key_raw):
+						raw_entry_by_full_id[key_raw] = entry
+
 			pub_href = XmlParserSitesGData.FindOneElement(
 			 	entry['elements'], name = 'link',
 				attr_name = 'rel', attr_value = 'alternate',
@@ -477,7 +491,7 @@ class SitesBackup:
 				exit('Encountering HREF "%s" for the second time' % (pub_href))
 			raw_html_content[pub_href] = content
 
-		return (feed, raw_html_content)
+		return (feed, raw_html_content, raw_entry_by_full_id)
 
 	def ParseUrl(self, pub_href):
 		url_re = re.compile(r'^http(s)?:\/\/sites\.google\.com\/(.+)/([^\/]+)$')
@@ -492,19 +506,30 @@ class SitesBackup:
 		return (href_dirname, href_filename)
 
 	def ProcessFeedEntries(self, destdir):
-		(feed, raw_html_content) = self.GetContentFeed()
+		self.dbg_entry = None
+		(feed, raw_html_content, raw_entry_by_full_id) = self.GetContentFeed()
 
 		processed = set()
 		id_to_pub_href = {}
 		while feed is not None:
+			self.dbg_entry = None
 			for entry in feed.entry:
+				self.dbg_entry = None
 				kind = entry.Kind()
 
 				out = {}
 				out['meta'] = []
 
-				out['meta'].append(' id:\t%s' % (entry.GetId()))
-				entry_short_id = self.ParseUrl(entry.GetId())[1]
+				entry_full_id = entry.GetId()
+				print "Entry ID: {}".format(entry_full_id)
+
+				self.dbg_entry = {
+					'id': entry_full_id,
+					'raw_entry': raw_entry_by_full_id.get(entry_full_id, None),
+				}
+
+				out['meta'].append(' id:\t%s' % (entry_full_id))
+				entry_short_id = self.ParseUrl(entry_full_id)[1]
 
 				if entry.GetAlternateLink():
 					pub_href = entry.GetAlternateLink().href
@@ -600,6 +625,8 @@ class SitesBackup:
 					destdir, out, href_dirname, href_filename,
 					kind
 				)
+			# end: for entry in feed.entry
+			self.dbg_entry = None
 
 			# http://stackoverflow.com/a/27639711/198219
 			next_link = feed.GetNextLink()
@@ -608,9 +635,11 @@ class SitesBackup:
 				('No' if next_link is None else 'Yes')
 
 			if next_link is None:
-				(feed, raw_html_content) = (None, None)
+				(feed, raw_html_content, raw_entry_by_full_id) = \
+					(None, None, None)
 			else:
-				(feed, raw_html_content) = self.GetContentFeed(next_link.href)
+				(feed, raw_html_content, raw_entry_by_full_id) = \
+					self.GetContentFeed(next_link.href)
 
 		return id_to_pub_href
 	
@@ -674,7 +703,16 @@ class SitesBackup:
 
 		print "Fetching & saving the content feed of '%s' ..." % (self.client.site)
 
-		id_to_pub_href = self.ProcessFeedEntries(destdir) # HTTP transfers
+		try:
+			id_to_pub_href = self.ProcessFeedEntries(destdir) # HTTP transfers
+		except Exception, ex:
+			sys.stderr.write("\n")
+			traceback.print_exc()
+
+			sys.stderr.write("\nAn error in ProcessFeedEntries() occurred.\n")
+			sys.stderr.write("Dumping the current entry:\n")
+			sys.stderr.write(pformat(self.dbg_entry) + "\n\n")
+			sys.exit(1)
 
 		self.MoveChildEntries(destdir, id_to_pub_href) # local file operations
 
