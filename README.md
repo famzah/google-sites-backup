@@ -47,10 +47,10 @@ Notes:
   * In the Google Developers Console, navigate to "APIs & auth", then "Credentials". Click the button "Add credentials" and choose "OAuth 2.0 client ID". Choose "other" for "Application type".
   * You can now see and use your client ID and client secret.
 
-## Alternative implementations
-
-The [Google Sites Liberation](https://github.com/sih4sing5hong5/google-sites-liberation) project is written in Java. As of its latest release, it works only in GUI mode since OAuth2 is not supported in the non-interactive console mode. Future versions may fix this, so check regularly if this solution suits you better.
-
 ## Tutorial
 
 Here is a user-contributed tutorial: http://alvaro.cat/en/blog/google-sites-backup.html
+
+## Alternative implementations
+
+The [Google Sites Liberation](https://github.com/sih4sing5hong5/google-sites-liberation) project is written in Java. As of its latest release, it works only in GUI mode since OAuth2 is not supported in the non-interactive console mode. Future versions may fix this, so check regularly if this solution suits you better.
