@@ -50,3 +50,7 @@ Notes:
 ## Alternative implementations
 
 The [Google Sites Liberation](https://github.com/sih4sing5hong5/google-sites-liberation) project is written in Java. As of its latest release, it works only in GUI mode since OAuth2 is not supported in the non-interactive console mode. Future versions may fix this, so check regularly if this solution suits you better.
+
+## Tutorial
+
+Here is a user-contributed tutorial: http://alvaro.cat/en/blog/google-sites-backup.html
